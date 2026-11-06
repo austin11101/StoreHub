@@ -1,0 +1,29 @@
+﻿# Environment files
+.env
+.env.*
+!.env.example
+
+# Dependencies
+/vendor/
+/node_modules/
+
+# Build output
+/dist/
+/build/
+
+# Laravel
+/storage/*.key
+/storage/logs/*
+/bootstrap/cache/*
+
+# IDE
+.idea/
+.vscode/
+
+# Operating system
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
