@@ -1,4 +1,6 @@
-﻿const modules = [
+import HealthStatus from './features/health/HealthStatus'
+
+const modules = [
   {
     name: 'Product catalogue',
     description: 'Manage products, categories, pricing and SKUs.',
@@ -182,6 +184,8 @@ function App() {
                   </div>
                 </div>
               </section>
+
+              <HealthStatus />
 
               <section aria-labelledby="modules-heading">
                 <div className="mb-5">
