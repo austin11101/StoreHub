@@ -12,17 +12,6 @@ it('returns a successful liveness response', function () {
 });
 
 it('returns a successful readiness response when the database is available', function () {
-    $connection = Mockery::mock();
-
-    $connection->shouldReceive('select')
-        ->once()
-        ->with('select 1')
-        ->andReturn([]);
-
-    DB::shouldReceive('connection')
-        ->once()
-        ->andReturn($connection);
-
     $this->getJson('/api/v1/health/ready')
         ->assertOk()
         ->assertExactJson([
@@ -34,9 +23,11 @@ it('returns a successful readiness response when the database is available', fun
 });
 
 it('returns service unavailable when the database is unavailable', function () {
-    DB::shouldReceive('connection')
-        ->once()
-        ->andThrow(new RuntimeException('Database unavailable'));
+    DB::connection()->beforeExecuting(
+        function (): void {
+            throw new RuntimeException('Database unavailable');
+        }
+    );
 
     $this->getJson('/api/v1/health/ready')
         ->assertServiceUnavailable()
