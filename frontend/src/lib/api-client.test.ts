@@ -1,8 +1,14 @@
-﻿import { afterEach, describe, expect, it, vi } from 'vitest'
-import { ApiError, apiRequest } from './api-client'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import {
+  ApiError,
+  apiRequest,
+  initializeCsrfCookie,
+} from './api-client'
+import { API_BASE_URL } from './env'
 
 afterEach(() => {
   vi.unstubAllGlobals()
+  document.cookie = 'XSRF-TOKEN=; Max-Age=0; path=/'
 })
 
 describe('API client', () => {
@@ -69,6 +75,114 @@ describe('API client', () => {
     const headers = new Headers(requestOptions.headers)
 
     expect(headers.get('Accept')).toBe('application/json')
+  })
+
+  it('attaches the XSRF token to POST requests', async () => {
+    document.cookie = 'XSRF-TOKEN=test-token'
+
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ message: 'Success' }), {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }),
+    )
+
+    vi.stubGlobal('fetch', fetchMock)
+
+    await apiRequest('auth/login', {
+      method: 'POST',
+      body: JSON.stringify({
+        email: 'test@example.com',
+        password: 'password',
+      }),
+    })
+
+    const requestOptions = fetchMock.mock.calls[0]?.[1] as RequestInit
+    const headers = new Headers(requestOptions.headers)
+
+    expect(headers.get('X-XSRF-TOKEN')).toBe('test-token')
+  })
+
+  it('decodes the XSRF token before attaching it', async () => {
+    document.cookie = 'XSRF-TOKEN=encoded%20token'
+
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response('{}', {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }),
+    )
+
+    vi.stubGlobal('fetch', fetchMock)
+
+    await apiRequest('auth/logout', {
+      method: 'POST',
+    })
+
+    const requestOptions = fetchMock.mock.calls[0]?.[1] as RequestInit
+    const headers = new Headers(requestOptions.headers)
+
+    expect(headers.get('X-XSRF-TOKEN')).toBe('encoded token')
+  })
+
+  it('does not attach an XSRF token to GET requests', async () => {
+    document.cookie = 'XSRF-TOKEN=test-token'
+
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response('{}', {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }),
+    )
+
+    vi.stubGlobal('fetch', fetchMock)
+
+    await apiRequest('auth/user')
+
+    const requestOptions = fetchMock.mock.calls[0]?.[1] as RequestInit
+    const headers = new Headers(requestOptions.headers)
+
+    expect(headers.has('X-XSRF-TOKEN')).toBe(false)
+  })
+
+  it('initialises the Sanctum CSRF cookie using the API origin', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(null, { status: 204 }),
+    )
+
+    vi.stubGlobal('fetch', fetchMock)
+
+    await initializeCsrfCookie()
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      new URL('/sanctum/csrf-cookie', API_BASE_URL).toString(),
+      expect.objectContaining({
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          Accept: 'application/json',
+        },
+      }),
+    )
+  })
+
+  it('throws ApiError when CSRF initialisation fails', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(null, { status: 500 }),
+    )
+
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(initializeCsrfCookie()).rejects.toMatchObject({
+      name: 'ApiError',
+      status: 500,
+    })
   })
 
   it('throws ApiError when the server returns an HTTP error', async () => {

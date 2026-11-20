@@ -1,6 +1,7 @@
 ﻿import { Route, Routes } from 'react-router-dom'
 import PublicLayout from '../layouts/PublicLayout'
 import DashboardLayout from '../layouts/DashboardLayout'
+import ProtectedRoute from './ProtectedRoute'
 import WelcomePage from '../../features/auth/pages/WelcomePage'
 import LoginPage from '../../features/auth/pages/LoginPage'
 import RegisterPage from '../../features/auth/pages/RegisterPage'
@@ -21,11 +22,13 @@ function AppRouter() {
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       </Route>
 
-      <Route path="/app" element={<DashboardLayout />}>
-        <Route index element={<OverviewPage />} />
-        <Route path="products" element={<ProductsPage />} />
-        <Route path="inventory" element={<InventoryPage />} />
-        <Route path="orders" element={<OrdersPage />} />
+      <Route element={<ProtectedRoute />}>
+        <Route path="/app" element={<DashboardLayout />}>
+          <Route index element={<OverviewPage />} />
+          <Route path="products" element={<ProductsPage />} />
+          <Route path="inventory" element={<InventoryPage />} />
+          <Route path="orders" element={<OrdersPage />} />
+        </Route>
       </Route>
 
       <Route path="*" element={<NotFoundPage />} />
